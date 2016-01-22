@@ -1,5 +1,7 @@
 import logging
 
+import numpy as np
+
 from . import decoder
 from . import fingerprint
 
@@ -49,15 +51,13 @@ class Lafayette():
         return self.best_match(matches)
 
     def match_frames(self, frames, frame_rate):
-        fingerprint = self.fingerprint_frames(frames, frame_rate)
+        nums = np.fromstring(frames, np.int16)
+        fingerprint = self.fingerprint_frames(nums[0::1], frame_rate)
         matches = self.get_matched(fingerprint)
         return self.best_match(matches)
 
     def get_matched(self, fingerprint):
-        #fingerprint = [h for h in fingerprint]
-        #print("searching %s hashes" % len(fingerprint))
         for hash_, offset in fingerprint:
-            #print("searching for:", hash_)
             data = self._data.get(hash_)
             if not data:
                 continue
@@ -91,8 +91,6 @@ class Lafayette():
                 largest_count = diff_counter[diff][id_]
                 best_id = id_
 
-
-        # return match info
         nseconds = fingerprint.offset_to_sec(largest)
 
         song = self.get_by_id(best_id)
