@@ -30,7 +30,8 @@ class Lafayette():
         return song_name, all_hashes
 
     def fingerprint_frames(self, frames, frame_rate):
-        return fingerprint.fingerprint(frames, frame_rate=frame_rate)
+        nums = np.fromstring(frames, np.int16)
+        return fingerprint.fingerprint(nums, frame_rate)
 
     def _insert_hashes(self, hashes, track_data):
         count = 0
@@ -45,6 +46,13 @@ class Lafayette():
             'offset': offset
         }
 
+    def rm_hashes(self, hashes):
+        count = 0
+        for hash_ in hashes:
+            if self._data.pop(hash_, None):
+                count += 1
+        return count
+
     def match_file(self, file_path):
         _, fingerprint = self.fingerprint_file(file_path, save=False)
         matches =  self.get_matched(fingerprint)
@@ -52,16 +60,16 @@ class Lafayette():
 
     def match_frames(self, frames, frame_rate):
         nums = np.fromstring(frames, np.int16)
-        fingerprint = self.fingerprint_frames(nums[0::1], frame_rate)
-        matches = self.get_matched(fingerprint)
+        fingerprints = self.fingerprint_frames(nums[0::1], frame_rate)
+        matches = self.get_matched(fingerprints)
         return self.best_match(matches)
 
-    def get_matched(self, fingerprint):
-        for hash_, offset in fingerprint:
+    def get_matched(self, fingerprints):
+        for hash_, offset in fingerprints:
             data = self._data.get(hash_)
             if not data:
                 continue
-            yield data['song']['id'], data['offset'] - offset
+            yield hash_, data['song']['id'], data['offset'] - offset
 
     def get_by_id(self, id_):
         for track in [hash_info['song'] for hash_info in self._data.values()]:
@@ -79,7 +87,7 @@ class Lafayette():
         largest = 0
         largest_count = 0
         best_id = None
-        for id_, diff in matches:
+        for hash_, id_, diff in matches:
             if diff not in diff_counter:
                 diff_counter[diff] = {}
             if id_ not in diff_counter[diff]:
